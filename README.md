@@ -6,7 +6,8 @@
 
 - `index.html` — 배포용(차트/폰트 CDN 참조)
 - `index.local.html` + `vendor/` — 오프라인/로컬 프리뷰용(의존성 로컬 포함)
-- 재배포: `scratchpad/aromatica-recruit-saas/` 에 `index.html` 갱신 후 `npx vercel deploy --prod --yes --token=<토큰>`
+- GitHub: https://github.com/Juju-4/aromatica-recruit-saas (Vercel git 연동)
+- **재배포: `main` 브랜치에 `git push` 하면 자동 배포됨** (별도 명령 불필요)
 
 ## 구조
 - `index.html` — 단일 페이지 앱 (사이드바 탭 전환 방식, 19개 화면)
