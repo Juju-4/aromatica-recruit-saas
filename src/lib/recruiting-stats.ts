@@ -17,24 +17,51 @@ export type Raw = Record<string, unknown>;
 
 const s = (v: unknown) => (v == null ? "" : String(v).trim());
 
+/** 행에서 여러 후보 키(정규화·부분일치)로 값 찾기 — 원본 헤더가 그대로 남아있는 경우 대비 */
+function g(row: Raw, ...cands: string[]): string {
+  // 1) 정확 키 우선
+  for (const c of cands) {
+    if (row[c] != null && s(row[c]) !== "") return s(row[c]);
+  }
+  // 2) 정규화 부분일치
+  const norm = (x: string) => x.replace(/[\s()·:/_\-]/g, "").toLowerCase();
+  const nc = cands.map(norm);
+  for (const [k, v] of Object.entries(row)) {
+    const nk = norm(k);
+    if (nc.some((c) => nk === c || (c.length >= 2 && nk.includes(c)))) {
+      const val = s(v);
+      if (val) return val;
+    }
+  }
+  return "";
+}
+
 /** ATS 원본의 다양한 컬럼명을 흡수 */
 export function parseApplicants(rows: Raw[]): Applicant[] {
   return rows
     .map((r) => ({
-      name: s(r.name) || s(r.applicant_name) || s(r.applicant_id),
-      position: s(r.position) || s(r.job) || "(미지정)",
-      job_family: s(r.job_family) || s(r.family) || "",
-      channel: normChannel(s(r.channel) || s(r.source)),
-      applied_at: normDate(s(r.applied_at) || s(r.apply_date)),
-      stage: s(r.stage) || s(r.current_stage),
-      status: s(r.status) || "진행중",
-      reject_reason: s(r.reject_reason) || s(r.reason),
-      first_result_at: normDate(s(r.doc_result_at) || s(r.first_result_at)),
-      first_interview_at: normDate(s(r.first_interview_at)),
-      final_result_at: normDate(
-        s(r.final_result_at) || s(r.result_at) || s(r.stage_changed_at),
+      name: g(r, "name", "지원자명", "이름", "성명", "지원자", "candidate", "applicant_name"),
+      position:
+        g(r, "position", "지원포지션", "포지션", "직무", "공고", "채용공고", "job", "지원직무") ||
+        "(미지정)",
+      job_family: g(r, "job_family", "직군", "family", "채용분야", "부문"),
+      channel: normChannel(
+        g(r, "channel", "지원경로", "유입경로", "경로", "유입채널", "채널", "source", "지원방법"),
       ),
-      joined_at: normDate(s(r.joined_at) || s(r.join_date) || s(r.hire_date)),
+      applied_at: normDate(
+        g(r, "applied_at", "지원일", "지원일자", "접수일", "지원날짜", "등록일", "apply_date", "지원등록일"),
+      ),
+      stage: g(r, "stage", "현재단계", "전형단계", "단계", "진행단계", "current_stage", "전형상태"),
+      status:
+        g(r, "status", "상태", "진행상태", "합불", "결과", "합격여부", "최종결과", "전형결과") ||
+        "진행중",
+      reject_reason: g(r, "reject_reason", "불합격사유", "탈락사유", "사유", "reason", "불합격이유"),
+      first_result_at: normDate(g(r, "doc_result_at", "서류결과일", "서류합격일", "first_result_at")),
+      first_interview_at: normDate(g(r, "first_interview_at", "1차면접일", "실무면접일", "면접일")),
+      final_result_at: normDate(
+        g(r, "final_result_at", "최종결과일", "result_at", "stage_changed_at", "단계변경일", "최종합격일"),
+      ),
+      joined_at: normDate(g(r, "joined_at", "입사일", "합류일", "join_date", "hire_date", "onboarding_date")),
     }))
     .filter((a) => a.name || a.position !== "(미지정)");
 }

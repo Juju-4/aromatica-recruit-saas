@@ -3,13 +3,15 @@
 import { useRef, useState } from "react";
 import { UploadCloud, Loader2, Check, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { DATA_CATEGORIES } from "@/lib/data-catalog";
 import {
   analyzeFile,
   mapRowsToCategory,
+  ALL_CATS,
+  POSITIONS_PSEUDO,
   type SheetDetection,
 } from "@/lib/smart-import";
 import { createDataset } from "@/lib/datasets";
+import { bulkInsertPositions } from "@/lib/positions";
 import { useSession } from "@/components/session-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +35,10 @@ interface Plan {
   include: boolean;
   categoryKey: string;
   name: string;
+}
+
+function catLabel(key: string): string {
+  return ALL_CATS.find((c) => c.key === key)?.label ?? "";
 }
 
 export function SmartUpload({
@@ -62,10 +68,11 @@ export function SmartUpload({
       setPlans(
         dets.map((det) => ({
           det,
-          include: !!det.best && det.rows.length > 0,
-          categoryKey: det.best?.categoryKey ?? "",
-          name:
-            dets.length > 1 ? `${base} · ${det.sheetName}` : base,
+          // 확신 있는 것만 자동 선택. 불확실하면 사용자가 종류 고른 뒤 체크
+          include: !!det.best,
+          categoryKey:
+            det.best?.categoryKey ?? det.candidates[0]?.categoryKey ?? "",
+          name: dets.length > 1 ? `${base} · ${det.sheetName}` : base,
         })),
       );
     } catch (e) {
@@ -81,31 +88,34 @@ export function SmartUpload({
     if (!file) return;
     const chosen = plans.filter((p) => p.include && p.categoryKey);
     if (chosen.length === 0) {
-      toast.error("저장할 항목을 선택해주세요.");
+      toast.error("저장할 항목의 종류를 선택해주세요.");
       return;
     }
     setSaving(true);
     try {
+      const summary: string[] = [];
       for (const p of chosen) {
-        // 카테고리 오버라이드 시 원본 행을 그 카테고리 기준으로 재매핑
-        const cat = DATA_CATEGORIES.find((c) => c.key === p.categoryKey);
+        const cat = ALL_CATS.find((c) => c.key === p.categoryKey);
         const rows =
           p.categoryKey === p.det.best?.categoryKey || !cat
             ? p.det.rows
             : mapRowsToCategory(p.det.rawRows, p.det.headers, cat);
-        await createDataset({
-          categoryKey: p.categoryKey,
-          name: p.name.trim() || p.det.sheetName,
-          rows,
-          file: chosen.length === 1 ? file : null,
-          uploadedByName: session?.name ?? null,
-        });
+
+        if (p.categoryKey === POSITIONS_PSEUDO.key) {
+          const n = await bulkInsertPositions(rows);
+          summary.push(`채용 포지션 ${n}건`);
+        } else {
+          await createDataset({
+            categoryKey: p.categoryKey,
+            name: p.name.trim() || p.det.sheetName,
+            rows,
+            file: chosen.length === 1 ? file : null,
+            uploadedByName: session?.name ?? null,
+          });
+          summary.push(`${catLabel(p.categoryKey)} ${rows.length}행`);
+        }
       }
-      toast.success(
-        `${chosen.length}개 데이터셋 저장 완료 (${chosen
-          .map((c) => catLabel(c.categoryKey))
-          .join(", ")})`,
-      );
+      toast.success(`저장 완료 — ${summary.join(", ")}`);
       setOpen(false);
       setFile(null);
       setPlans([]);
@@ -153,21 +163,19 @@ export function SmartUpload({
             </div>
           ) : plans.length === 0 ? (
             <div className="py-8 text-center text-[13px] text-muted-foreground">
-              인식할 수 있는 표를 찾지 못했습니다. 헤더(첫 행) 이름이 양식과
-              비슷한지 확인해주세요.
+              데이터가 있는 표를 찾지 못했습니다. 엑셀/CSV에 헤더 행과 데이터 행이
+              있는지 확인해주세요.
             </div>
           ) : (
             <div className="space-y-3">
               <p className="text-[12px] text-muted-foreground">
                 파일에서 {plans.length}개 시트를 확인했습니다. 자동 분류 결과를
-                확인하고 필요하면 바꿔주세요.
+                확인하고, 틀렸거나 &lsquo;직접 선택&rsquo;이면 종류를 골라주세요.
+                (양식과 컬럼명이 달라도 최대한 맞춰 넣습니다.)
               </p>
               {plans.map((p, i) => (
-                <div
-                  key={p.det.sheetName}
-                  className="rounded-md border px-3 py-2.5"
-                >
-                  <div className="flex items-center gap-2">
+                <div key={p.det.sheetName} className="rounded-md border px-3 py-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="checkbox"
                       checked={p.include}
@@ -183,17 +191,20 @@ export function SmartUpload({
                       시트 &ldquo;{p.det.sheetName}&rdquo;
                     </span>
                     <span className="text-[11px] text-muted-foreground">
-                      {p.det.rowCount || p.det.rows.length}행
+                      {p.det.rowCount}행
                     </span>
                     {p.det.best ? (
                       <span className="inline-flex items-center gap-1 text-[10.5px] text-[color:var(--good)]">
                         <Check className="size-3" />
-                        자동 인식 {Math.round((p.det.best.score ?? 0) * 100)}%
+                        자동 인식됨
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-[10.5px] text-[color:var(--warning)]">
                         <AlertTriangle className="size-3" />
-                        자동 인식 실패 — 직접 선택
+                        종류 확인 필요{" "}
+                        {p.det.candidates[0]
+                          ? `(추정: ${p.det.candidates[0].label})`
+                          : ""}
                       </span>
                     )}
                   </div>
@@ -220,7 +231,7 @@ export function SmartUpload({
                             </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
-                            {DATA_CATEGORIES.map((c) => (
+                            {ALL_CATS.map((c) => (
                               <SelectItem key={c.key} value={c.key}>
                                 {c.label}
                               </SelectItem>
@@ -244,11 +255,11 @@ export function SmartUpload({
                           }
                         />
                       </div>
-                      {p.det.best ? (
-                        <div className="col-span-2 text-[10.5px] text-muted-foreground">
-                          매칭된 컬럼: {p.det.best.matched.join(", ")}
-                        </div>
-                      ) : null}
+                      <div className="col-span-2 text-[10.5px] text-muted-foreground">
+                        {p.det.best
+                          ? `매칭된 컬럼: ${p.det.best.matched.join(", ")}`
+                          : `읽은 컬럼: ${p.det.headers.slice(0, 12).join(", ")}`}
+                      </div>
                     </div>
                   ) : null}
                 </div>
@@ -271,8 +282,4 @@ export function SmartUpload({
       </Dialog>
     </>
   );
-}
-
-function catLabel(key: string): string {
-  return DATA_CATEGORIES.find((c) => c.key === key)?.label ?? "";
 }

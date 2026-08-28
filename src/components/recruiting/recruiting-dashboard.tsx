@@ -17,6 +17,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -24,11 +31,12 @@ import {
 } from "@/components/ui/chart";
 
 export function RecruitingDashboard() {
-  const [apps, setApps] = useState<Applicant[] | null>(null);
+  const [allApps, setAllApps] = useState<Applicant[] | null>(null);
+  const [posFilter, setPosFilter] = useState("__all__");
 
   const load = useCallback(async () => {
     const data = await loadActiveRows(["recruiting"]);
-    setApps(parseApplicants(data.recruiting ?? []));
+    setAllApps(parseApplicants(data.recruiting ?? []));
   }, []);
 
   useEffect(() => {
@@ -44,6 +52,23 @@ export function RecruitingDashboard() {
     };
   }, [load]);
 
+  const positions = useMemo(() => {
+    if (!allApps) return [];
+    const m = new Map<string, number>();
+    for (const a of allApps) m.set(a.position, (m.get(a.position) ?? 0) + 1);
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [allApps]);
+
+  const apps = useMemo(
+    () =>
+      allApps == null
+        ? null
+        : posFilter === "__all__"
+          ? allApps
+          : allApps.filter((a) => a.position === posFilter),
+    [allApps, posFilter],
+  );
+
   const k = useMemo(() => (apps ? kpi(apps) : null), [apps]);
   const flow = useMemo(() => (apps ? inflow(apps, "month") : []), [apps]);
   const chan = useMemo(() => (apps ? byChannel(apps) : []), [apps]);
@@ -52,21 +77,43 @@ export function RecruitingDashboard() {
 
   if (apps === null) return <Skeleton className="h-64 w-full" />;
 
-  if (apps.length === 0) {
+  if (allApps!.length === 0) {
     return (
       <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-10 text-center text-[12.5px] text-muted-foreground">
-        <b>채용 · 지원자 데이터</b> 를 업로드하면 지원자 유입·경로별 성과·불합격
-        분석·포지션별 퍼널이 여기에 표시됩니다. (우측 상단 <b>데이터 업로드</b>)
+        <b>채용 · 지원자 데이터</b> 를 업로드하면 포지션별 지원자 현황·유입·단계별
+        진행이 여기에 표시됩니다. (우측 상단 <b>데이터 업로드</b> — 양식이 달라도
+        자동으로 맞춰 넣습니다.)
       </div>
     );
   }
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-[13px] font-extrabold">지원자 분석</h2>
+        <Select value={posFilter} onValueChange={(v) => setPosFilter(String(v ?? "__all__"))}>
+          <SelectTrigger className="h-7 w-64 text-[12px]">
+            <SelectValue>
+              {(v) =>
+                String(v) === "__all__"
+                  ? "전체 포지션"
+                  : String(v).length > 34
+                    ? String(v).slice(0, 34) + "…"
+                    : String(v)
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent className="max-h-80">
+            <SelectItem value="__all__">전체 포지션</SelectItem>
+            {positions.map(([p, n]) => (
+              <SelectItem key={p} value={p}>
+                {p} ({n})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <span className="text-[11px] text-muted-foreground">
-          업로드된 지원자 데이터 기준 · 실시간 갱신
+          선택한 포지션 기준으로 아래 지표·차트·리스트가 모두 필터됩니다 · 실시간 갱신
         </span>
       </div>
 

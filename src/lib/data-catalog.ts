@@ -15,6 +15,8 @@ export interface CatalogColumn {
   example: string | number;
   required?: boolean;
   help?: string;
+  /** 다른 시스템/양식의 헤더명 후보 (스마트 업로드 자동 매칭용) */
+  aliases?: string[];
 }
 
 export interface DataCategory {
@@ -31,12 +33,12 @@ export const DATA_CATEGORIES: DataCategory[] = [
     description:
       "임직원 1인 = 1행. 연봉 분포(중위·사분위)·연차별 페이밴드·직종 순위·인상 동향·처우 시뮬레이터의 원천 데이터.",
     columns: [
-      { key: "month", label: "월", type: "text", example: "2026-08", required: true, help: "YYYY-MM" },
-      { key: "job_family", label: "직종", type: "text", example: "개발", required: true, help: "예: 개발, 마케팅, 영업, 디자인, HR" },
-      { key: "role", label: "직무", type: "text", example: "백엔드 개발자", required: true },
-      { key: "grade", label: "직급", type: "text", example: "Manager", help: "예: Staff, Senior, Manager, Lead" },
-      { key: "years", label: "연차", type: "number", example: 6, required: true },
-      { key: "annual_salary", label: "연봉(만원)", type: "number", example: 6000, required: true },
+      { key: "month", label: "월", type: "text", example: "2026-08", required: true, help: "YYYY-MM", aliases: ["기준월", "기준연월", "급여월", "지급월"] },
+      { key: "job_family", label: "직종", type: "text", example: "개발", required: true, help: "예: 개발, 마케팅, 영업, 디자인, HR", aliases: ["직군", "부문", "직무군"] },
+      { key: "role", label: "직무", type: "text", example: "백엔드 개발자", required: true, aliases: ["세부직무", "포지션", "role"] },
+      { key: "grade", label: "직급", type: "text", example: "Manager", help: "예: Staff, Senior, Manager, Lead", aliases: ["레벨", "직책", "grade", "level"] },
+      { key: "years", label: "연차", type: "number", example: 6, required: true, aliases: ["근속연차", "경력연차", "총연차", "tenure"] },
+      { key: "annual_salary", label: "연봉(만원)", type: "number", example: 6000, required: true, aliases: ["연봉", "총연봉", "기준연봉", "salary", "annual salary", "보상"] },
     ],
   },
   {
@@ -103,18 +105,18 @@ export const DATA_CATEGORIES: DataCategory[] = [
     description:
       "지원자 1명 = 1행. 지원자 유입·경로별 성과·불합격 사유·포지션/직군별 퍼널·평균 소요일 분석의 원천 데이터.",
     columns: [
-      { key: "name", label: "지원자명", type: "text", example: "이도현", required: true },
-      { key: "position", label: "지원 포지션", type: "text", example: "백엔드 개발자", required: true, help: "채용 포지션 표의 포지션명과 일치시키면 포지션별 분석이 연결됩니다" },
-      { key: "job_family", label: "직군", type: "text", example: "개발", help: "예: 개발, 마케팅, 영업, 디자인" },
-      { key: "channel", label: "지원 경로", type: "text", example: "원티드", help: "예: 원티드, 사람인, 링크드인, 내부추천, 채용홈페이지, 헤드헌터" },
-      { key: "applied_at", label: "지원일", type: "date", example: "2026-07-15", required: true },
-      { key: "stage", label: "현재 단계", type: "select", example: "1차 면접", help: "서류/서류합격/1차면접/2차면접/최종면접/처우협의/최종합격/입사" },
-      { key: "status", label: "상태", type: "select", example: "진행중", required: true, help: "진행중 / 합격 / 불합격 / 보류 / 지원취소" },
-      { key: "reject_reason", label: "불합격 사유", type: "text", example: "", help: "예: 경력 미스매치, 직무역량 부족, 컬처핏, 처우 미합의, 지원자 사퇴" },
-      { key: "doc_result_at", label: "서류결과일", type: "date", example: "2026-07-20" },
-      { key: "first_interview_at", label: "1차면접일", type: "date", example: "2026-07-28" },
-      { key: "final_result_at", label: "최종결과일", type: "date", example: "2026-08-12" },
-      { key: "joined_at", label: "입사일", type: "date", example: "2026-09-01" },
+      { key: "name", label: "지원자명", type: "text", example: "이도현", required: true, aliases: ["이름", "성명", "지원자", "후보자", "candidate", "applicant"] },
+      { key: "position", label: "지원 포지션", type: "text", example: "백엔드 개발자", required: true, help: "채용 포지션 표의 포지션명과 일치시키면 포지션별 분석이 연결됩니다", aliases: ["포지션", "직무", "공고", "채용공고", "지원직무", "job", "role", "채용포지션", "지원공고"] },
+      { key: "job_family", label: "직군", type: "text", example: "개발", help: "예: 개발, 마케팅, 영업, 디자인", aliases: ["부문", "채용분야", "family", "직무군"] },
+      { key: "channel", label: "지원 경로", type: "text", example: "원티드", help: "예: 원티드, 사람인, 링크드인, 내부추천, 채용홈페이지, 헤드헌터", aliases: ["경로", "유입경로", "유입채널", "채널", "지원방법", "source", "매체"] },
+      { key: "applied_at", label: "지원일", type: "date", example: "2026-07-15", required: true, aliases: ["지원일자", "접수일", "접수일자", "지원날짜", "등록일", "지원등록일", "apply date", "created"] },
+      { key: "stage", label: "현재 단계", type: "select", example: "1차 면접", help: "서류/서류합격/1차면접/2차면접/최종면접/처우협의/최종합격/입사", aliases: ["전형단계", "단계", "진행단계", "전형상태", "stage"] },
+      { key: "status", label: "상태", type: "select", example: "진행중", required: true, help: "진행중 / 합격 / 불합격 / 보류 / 지원취소", aliases: ["진행상태", "합불", "결과", "합격여부", "최종결과", "전형결과", "status"] },
+      { key: "reject_reason", label: "불합격 사유", type: "text", example: "", help: "예: 경력 미스매치, 직무역량 부족, 컬처핏, 처우 미합의, 지원자 사퇴", aliases: ["탈락사유", "사유", "불합격이유", "reason"] },
+      { key: "doc_result_at", label: "서류결과일", type: "date", example: "2026-07-20", aliases: ["서류합격일", "서류전형일"] },
+      { key: "first_interview_at", label: "1차면접일", type: "date", example: "2026-07-28", aliases: ["실무면접일", "면접일"] },
+      { key: "final_result_at", label: "최종결과일", type: "date", example: "2026-08-12", aliases: ["최종합격일", "단계변경일"] },
+      { key: "joined_at", label: "입사일", type: "date", example: "2026-09-01", aliases: ["합류일", "입사예정일", "onboarding date", "hire date"] },
     ],
   },
   {
