@@ -77,6 +77,13 @@ export async function createDataset(opts: {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // 같은 종류의 기존 데이터셋은 비활성화 → 가장 최근 업로드가 분석에 반영됨
+  // (필요하면 데이터 관리에서 ⭐로 대표를 바꿀 수 있음)
+  await supabase
+    .from("datasets")
+    .update({ is_active: false })
+    .eq("category_key", opts.categoryKey);
+
   const { data: ds, error: dsErr } = await supabase
     .from("datasets")
     .insert({

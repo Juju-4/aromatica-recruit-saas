@@ -47,9 +47,9 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         slug: "sourcingfunnel",
         title: "소싱 · 퍼널 분석",
-        sub: "전형 퍼널 진단 · 소싱 채널 성과 · 채용 비용/기간 구조",
+        sub: "전형 단계별 퍼널 · 지원 경로별 성과 · 불합격 사유 진단",
         tag: "Tier 1-2 · Diagnostic",
-        categories: ["recruiting", "sourcing_channels"],
+        categories: ["recruiting"],
       },
     ],
   },
