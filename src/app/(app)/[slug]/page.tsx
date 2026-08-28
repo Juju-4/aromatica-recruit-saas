@@ -3,6 +3,13 @@ import { NAV_ITEMS, getNavItem } from "@/lib/nav";
 import { PageHeader } from "@/components/page-header";
 import { RequiredDataPanel } from "@/components/data/required-data-panel";
 import { DataSummary } from "@/components/data/data-summary";
+import { SalaryAnalytics } from "@/components/salary/salary-analytics";
+
+/** 특정 화면은 전용 분석 컴포넌트를 사용 (그 외는 범용 DataSummary) */
+const CUSTOM_ANALYSIS: Record<string, React.ReactNode> = {
+  compband: <SalaryAnalytics />,
+  offersim: <SalaryAnalytics showOfferEvaluator />,
+};
 
 /** dataentry / org / rbac 는 전용 라우트 파일이 처리한다. */
 const DEDICATED = new Set(["dataentry", "org", "rbac"]);
@@ -37,10 +44,12 @@ export default async function AnalysisPage({
         <RequiredDataPanel categories={item.categories} />
       )}
 
-      <DataSummary
-        categories={item.categories}
-        predictive={item.predictive}
-      />
+      {CUSTOM_ANALYSIS[slug] ?? (
+        <DataSummary
+          categories={item.categories}
+          predictive={item.predictive}
+        />
+      )}
     </div>
   );
 }

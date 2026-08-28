@@ -26,6 +26,20 @@ export interface DataCategory {
 
 export const DATA_CATEGORIES: DataCategory[] = [
   {
+    key: "salary",
+    label: "임직원 연봉 데이터",
+    description:
+      "임직원 1인 = 1행. 연봉 분포(중위·사분위)·연차별 페이밴드·직종 순위·인상 동향·처우 시뮬레이터의 원천 데이터.",
+    columns: [
+      { key: "month", label: "월", type: "text", example: "2026-08", required: true, help: "YYYY-MM" },
+      { key: "job_family", label: "직종", type: "text", example: "개발", required: true, help: "예: 개발, 마케팅, 영업, 디자인, HR" },
+      { key: "role", label: "직무", type: "text", example: "백엔드 개발자", required: true },
+      { key: "grade", label: "직급", type: "text", example: "Manager", help: "예: Staff, Senior, Manager, Lead" },
+      { key: "years", label: "연차", type: "number", example: 6, required: true },
+      { key: "annual_salary", label: "연봉(만원)", type: "number", example: 6000, required: true },
+    ],
+  },
+  {
     key: "fin_statements",
     label: "재무제표 · 손익계산서",
     description: "매출·영업이익·인건비 등 경영 지표. 적정인원·임금인상·투자효율 분석의 기준 데이터.",
