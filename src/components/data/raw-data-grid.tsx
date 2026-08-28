@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -27,7 +27,6 @@ export function RawDataGrid({
   const cat = getCategory(categoryKey);
   const [rows, setRows] = useState<RowRecord[] | null>(null);
   const [busy, setBusy] = useState(false);
-  const dirty = useRef<Record<string, Record<string, unknown>>>({});
 
   const load = useCallback(async () => {
     try {
