@@ -47,25 +47,34 @@ function normDate(v: string): string {
 }
 
 const CHANNEL_MAP: [RegExp, string][] = [
-  [/saramin/i, "사람인"],
-  [/wanted/i, "원티드"],
-  [/linkedin/i, "링크드인"],
-  [/jobkorea/i, "잡코리아"],
+  [/saramin|사람인|스마트리쿠르터/i, "사람인"],
+  [/jobkorea|잡코리아/i, "잡코리아"],
+  [/wanted|원티드/i, "원티드"],
+  [/jobplanet|잡플래닛/i, "잡플래닛"],
+  [/linkedin|링크드인/i, "링크드인"],
+  [/리멤버|remember/i, "리멤버"],
   [/rocketpunch|로켓펀치/i, "로켓펀치"],
   [/jumpit|점핏/i, "점핏"],
   [/programmers|프로그래머스/i, "프로그래머스"],
-  [/greeting|그리팅/i, "그리팅"],
+  [/링커리어|linkareer/i, "링커리어"],
+  [/알바몬|albamon/i, "알바몬"],
+  [/offercent|오퍼센트/i, "오퍼센트"],
+  [/커피챗|coffee\s*chat/i, "커피챗"],
+  [/내부\s*추천|사내\s*추천|referral|지인/i, "내부추천"],
+  [/외부\s*추천/i, "외부추천"],
+  [/서치펌|헤드헌|head\s*hunt|search\s*firm/i, "서치펌·헤드헌터"],
+  [/greeting|그리팅|aromatica|자사|회사\s*채용|채용\s*사이트|채용\s*홈|career\.|homepage|company\./i, "자사 채용페이지"],
+  [/instagram|facebook|threads|litt\.ly|linktr\.ee|\bsns\b|틱톡|tiktok|유튜브|youtube/i, "SNS·링크"],
+  [/naver|네이버/i, "네이버 검색"],
+  [/google|chatgpt|bing|검색/i, "검색·AI"],
   [/notion/i, "노션 공고"],
-  [/instagram|facebook|threads/i, "SNS"],
-  [/referral|추천|지인/i, "내부추천"],
-  [/헤드헌|search firm|hunt/i, "헤드헌터"],
-  [/homepage|career|자사|채용홈|self|직접|website/i, "직접지원"],
+  [/직접\s*등록|직접\s*지원|self|walk-?in/i, "직접지원"],
+  [/알\s*수\s*없음|unknown|미상|n\/?a/i, "미상"],
 ];
 function normChannel(v: string): string {
-  if (!v) return "(미상)";
+  if (!v) return "미상";
   for (const [re, label] of CHANNEL_MAP) if (re.test(v)) return label;
-  // 도메인만 남기고 정리
-  return v.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  return v.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^m\./, "");
 }
 
 /** 전형 단계 순위 (한국형 ATS 공통 키워드) */

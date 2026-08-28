@@ -120,15 +120,14 @@ export const DATA_CATEGORIES: DataCategory[] = [
   {
     key: "sourcing_channels",
     label: "소싱 채널",
-    description: "채널별 계약·비용·성과. 소싱 채널 ROI/Yield 분석에 사용.",
+    description:
+      "채널명 · 유형 · 월 비용 · 계약 만료 · 연동 상태. (지원/합격/Yield/ROI 는 지원자 데이터의 '지원 경로' 로 자동 계산되므로 여기엔 넣지 않아도 됩니다.)",
     columns: [
-      { key: "channel", label: "채널명", type: "text", example: "내부 추천(Referral)", required: true },
-      { key: "type", label: "유형", type: "text", example: "무료·상시" },
-      { key: "monthly_cost", label: "월 비용(원)", type: "number", example: 2000000 },
-      { key: "contract_end", label: "계약 만료", type: "text", example: "2027-01" },
-      { key: "integration", label: "연동상태", type: "select", example: "연동됨" },
-      { key: "applicants", label: "지원자수", type: "number", example: 210, required: true },
-      { key: "hires", label: "합격자수", type: "number", example: 26, required: true },
+      { key: "channel", label: "채널명", type: "text", example: "원티드", required: true, help: "지원자 데이터의 '지원 경로' 값과 맞추면 자동 연결됩니다" },
+      { key: "type", label: "유형", type: "text", example: "채용 보드", help: "예: 채용 보드, 자체 채널, 에이전시, 오프라인, 무료·상시" },
+      { key: "monthly_cost", label: "월 비용(원)", type: "number", example: 9000000 },
+      { key: "contract_end", label: "계약 만료", type: "text", example: "2026-11" },
+      { key: "integration", label: "연동상태", type: "select", example: "연동됨", help: "연동됨 / 미연동 / 연동 지연" },
     ],
   },
   {

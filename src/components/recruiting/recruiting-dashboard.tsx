@@ -9,11 +9,6 @@ import {
   kpi,
   inflow,
   byChannel,
-  byPosition,
-  byJobFamily,
-  hasJobFamily,
-  rejectBreakdown,
-  funnel,
   stageBreakdown,
   recent,
   pct,
@@ -52,11 +47,6 @@ export function RecruitingDashboard() {
   const k = useMemo(() => (apps ? kpi(apps) : null), [apps]);
   const flow = useMemo(() => (apps ? inflow(apps, "month") : []), [apps]);
   const chan = useMemo(() => (apps ? byChannel(apps) : []), [apps]);
-  const rej = useMemo(() => (apps ? rejectBreakdown(apps) : { mode: "stage" as const, rows: [] }), [apps]);
-  const pos = useMemo(() => (apps ? byPosition(apps) : []), [apps]);
-  const fam = useMemo(() => (apps ? byJobFamily(apps) : []), [apps]);
-  const showFam = useMemo(() => (apps ? hasJobFamily(apps) : false), [apps]);
-  const fun = useMemo(() => (apps ? funnel(apps) : []), [apps]);
   const stages = useMemo(() => (apps ? stageBreakdown(apps) : []), [apps]);
   const rec = useMemo(() => (apps ? recent(apps, 12) : []), [apps]);
 
@@ -157,91 +147,18 @@ export function RecruitingDashboard() {
         </CardContent>
       </Card>
 
-      {/* 퍼널 */}
-      {fun.length > 1 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-[13px]">전형 퍼널 (근사)</CardTitle>
-            <p className="text-[11px] text-muted-foreground">
-              현재 단계 기준 해당 단계 이상 도달자 수 · 전형 이력이 없으므로 근사치
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-1.5">
-            {fun.map((s, i) => {
-              const max = fun[0]?.reached || 1;
-              return (
-                <div key={s.label} className="grid grid-cols-[120px_1fr_130px] items-center gap-2">
-                  <span className="truncate text-[11.5px] font-semibold" title={s.label}>
-                    {s.label}
-                  </span>
-                  <div className="h-6 rounded bg-muted">
-                    <div
-                      className="flex h-6 items-center rounded bg-[color:var(--chart-1)] px-2 text-[11px] font-bold text-white"
-                      style={{ width: `${Math.max(6, (s.reached / max) * 100)}%` }}
-                    >
-                      {s.reached}
-                    </div>
-                  </div>
-                  <span className="text-[10.5px] text-muted-foreground">
-                    {i === 0 ? "-" : `전환 ${s.conv.toFixed(0)}% · 이탈 ${s.drop.toFixed(0)}%`}
-                  </span>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {/* 경로별 */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-[13px]">지원 경로별 지원자</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RankBar data={chan.map((c) => ({ label: c.key, value: c.applied }))} unit="명" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-[13px]">지원 경로별 합격률</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RankBar
-              data={[...chan]
-                .filter((c) => c.applied >= 3)
-                .sort((a, b) => b.passRate - a.passRate)
-                .map((c) => ({ label: c.key, value: Math.round(c.passRate * 10) / 10 }))}
-              unit="%"
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 불합격 분석 */}
-      {rej.rows.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-[13px]">
-              {rej.mode === "reason" ? "불합격 사유 분포" : "불합격 발생 단계 분포"}
-            </CardTitle>
-            {rej.mode === "stage" ? (
-              <p className="text-[11px] text-muted-foreground">
-                불합격 사유 컬럼이 없어, 탈락이 발생한 전형 단계로 집계했습니다.
-              </p>
-            ) : null}
-          </CardHeader>
-          <CardContent>
-            <RankBar data={rej.rows} unit="명" />
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {/* 포지션별 / 직군별 */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <GroupTable title="포지션별 현황" rows={pos} />
-        {showFam ? <GroupTable title="직군별 현황" rows={fam} /> : null}
-      </div>
+      {/* 경로별 지원자 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-[13px]">지원 경로별 지원자</CardTitle>
+          <p className="text-[11px] text-muted-foreground">
+            경로별 성과·ROI·비용 진단은 <b>소싱 · 퍼널 분석</b> 화면에서 확인하세요.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <RankBar data={chan.map((c) => ({ label: c.key, value: c.applied }))} unit="명" />
+        </CardContent>
+      </Card>
 
       {/* 최근 지원자 */}
       <Card>
@@ -317,53 +234,3 @@ function RankBar({ data, unit }: { data: { label: string; value: number }[]; uni
   );
 }
 
-function GroupTable({
-  title,
-  rows,
-}: {
-  title: string;
-  rows: {
-    key: string;
-    applied: number;
-    passed: number;
-    inProgress: number;
-    passRate: number;
-    avgDaysToHire: number | null;
-  }[];
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-[13px]">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="max-h-80 overflow-auto border-t">
-          <table className="w-full text-[12px]">
-            <thead className="sticky top-0 bg-muted">
-              <tr>
-                {["구분", "지원", "평가중", "합격", "합격률"].map((h) => (
-                  <th key={h} className="px-3 py-1.5 text-left font-semibold">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.key} className="border-b last:border-0">
-                  <td className="max-w-48 truncate px-3 py-1.5 font-medium" title={r.key}>
-                    {r.key}
-                  </td>
-                  <td className="px-3 py-1.5">{r.applied}</td>
-                  <td className="px-3 py-1.5 text-muted-foreground">{r.inProgress}</td>
-                  <td className="px-3 py-1.5">{r.passed}</td>
-                  <td className="px-3 py-1.5">{r.passRate.toFixed(1)}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}

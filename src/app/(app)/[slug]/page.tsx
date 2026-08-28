@@ -5,7 +5,7 @@ import { RequiredDataPanel } from "@/components/data/required-data-panel";
 import { DataSummary } from "@/components/data/data-summary";
 import { SmartUpload } from "@/components/data/smart-upload";
 import { SalaryAnalytics } from "@/components/salary/salary-analytics";
-import { RecruitingDashboard } from "@/components/recruiting/recruiting-dashboard";
+import { SourcingFunnelDashboard } from "@/components/recruiting/sourcing-funnel-dashboard";
 import { OnboardingTracker } from "@/components/retention/onboarding-tracker";
 import { RetentionAnalysis } from "@/components/retention/retention-analysis";
 
@@ -13,7 +13,7 @@ import { RetentionAnalysis } from "@/components/retention/retention-analysis";
 const CUSTOM_ANALYSIS: Record<string, React.ReactNode> = {
   compband: <SalaryAnalytics />,
   offersim: <SalaryAnalytics showOfferEvaluator />,
-  sourcingfunnel: <RecruitingDashboard />,
+  sourcingfunnel: <SourcingFunnelDashboard />,
   onboarding: <OnboardingTracker />,
   retention: <RetentionAnalysis />,
 };
