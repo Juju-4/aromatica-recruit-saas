@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { NAV_ITEMS, getNavItem } from "@/lib/nav";
 import { PageHeader } from "@/components/page-header";
 import { RequiredDataPanel } from "@/components/data/required-data-panel";
+import { DataSummary } from "@/components/data/data-summary";
 
 /** dataentry / org / rbac 는 전용 라우트 파일이 처리한다. */
 const DEDICATED = new Set(["dataentry", "org", "rbac"]);
@@ -32,12 +33,14 @@ export default async function AnalysisPage({
         </div>
       ) : null}
 
-      <RequiredDataPanel categories={item.categories} />
+      {slug === "summary" ? null : (
+        <RequiredDataPanel categories={item.categories} />
+      )}
 
-      <section className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-center text-[12px] text-muted-foreground">
-        분석 결과(KPI · 차트 · 표)는 업로드된 데이터를 기반으로 다음 단계에서 이
-        위치에 표시됩니다.
-      </section>
+      <DataSummary
+        categories={item.categories}
+        predictive={item.predictive}
+      />
     </div>
   );
 }
