@@ -28,6 +28,23 @@ export interface DataCategory {
 
 export const DATA_CATEGORIES: DataCategory[] = [
   {
+    key: "employees",
+    label: "전 직원 연봉 · 조직",
+    description:
+      "재직 임직원 1인 = 1행. 처우 시뮬레이터의 '팀원 연봉 현황'·페이밴드 비교, 조직 분석의 기준 데이터.",
+    columns: [
+      { key: "emp_no", label: "사번", type: "text", example: "A-0101", aliases: ["직원번호", "사원번호"] },
+      { key: "name", label: "성명", type: "text", example: "김수현", required: true, aliases: ["이름", "직원명"] },
+      { key: "division", label: "본부", type: "text", example: "지원본부", aliases: ["소속본부", "사업본부"] },
+      { key: "department", label: "부서", type: "text", example: "CX팀", required: true, aliases: ["팀", "소속", "소속부서"] },
+      { key: "grade", label: "직급", type: "text", example: "Manager3", aliases: ["직위", "레벨", "직책"] },
+      { key: "annual_salary", label: "연봉(원)", type: "number", example: 41000000, required: true, help: "연 기준. 만원 단위면 자동 인식", aliases: ["연봉", "25년도 연봉", "기준연봉", "총연봉", "급여"] },
+      { key: "career_years", label: "경력(년)", type: "number", example: 6.9, aliases: ["총경력", "인정경력", "경력연차"] },
+      { key: "hire_date", label: "입사일", type: "date", example: "2021-03-02", aliases: ["입사연월", "입사년월일"] },
+      { key: "note", label: "비고", type: "text", example: "", aliases: ["메모", "특이사항"] },
+    ],
+  },
+  {
     key: "salary",
     label: "임직원 연봉 데이터",
     description:

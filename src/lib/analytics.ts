@@ -13,13 +13,18 @@ export async function loadActiveRows(
 
   const { data: datasets } = await supabase
     .from("datasets")
-    .select("id, category_key, is_active")
+    .select("id, category_key, is_active, hidden")
     .in("category_key", categoryKeys);
 
   const activeByCat = new Map<string, string[]>();
   for (const d of datasets ?? []) {
-    const row = d as { id: string; category_key: string; is_active: boolean };
-    if (!row.is_active) continue;
+    const row = d as {
+      id: string;
+      category_key: string;
+      is_active: boolean;
+      hidden: boolean;
+    };
+    if (!row.is_active || row.hidden) continue; // 숨긴 데이터셋은 분석에서 제외
     const arr = activeByCat.get(row.category_key) ?? [];
     arr.push(row.id);
     activeByCat.set(row.category_key, arr);
@@ -33,10 +38,12 @@ export async function loadActiveRows(
     }
     const { data: rows } = await supabase
       .from("dataset_rows")
-      .select("values")
+      .select("values, hidden")
       .in("dataset_id", ids)
       .order("row_no", { ascending: true });
-    out[key] = (rows ?? []).map((r) => (r as { values: Rows[number] }).values);
+    out[key] = (rows ?? [])
+      .filter((r) => !(r as { hidden?: boolean }).hidden) // 숨긴 행 제외
+      .map((r) => (r as { values: Rows[number] }).values);
   }
   return out;
 }

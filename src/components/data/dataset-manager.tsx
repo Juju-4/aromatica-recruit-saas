@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   Loader2,
   Star,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -19,6 +21,7 @@ import {
   createDataset,
   deleteDataset,
   setActive,
+  updateDataset,
   type DatasetRecord,
 } from "@/lib/datasets";
 import { useSession } from "@/components/session-provider";
@@ -147,6 +150,17 @@ export function DatasetManager({ categoryKey }: { categoryKey: string }) {
     }
   };
 
+  const onToggleHidden = async (ds: DatasetRecord) => {
+    try {
+      await updateDataset(ds.id, { hidden: !ds.hidden });
+      toast.success(ds.hidden ? "다시 표시됩니다." : "숨김 처리했습니다. 분석·표에서 제외됩니다.");
+      void load();
+    } catch (e) {
+      console.error(e);
+      toast.error("숨김 설정에 실패했습니다.");
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -191,7 +205,10 @@ export function DatasetManager({ categoryKey }: { categoryKey: string }) {
       ) : (
         <div className="space-y-2">
           {datasets.map((ds) => (
-            <div key={ds.id} className="rounded-md border">
+            <div
+              key={ds.id}
+              className={`rounded-md border ${ds.hidden ? "opacity-60" : ""}`}
+            >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5">
                 <button
                   onClick={() => canEdit && onToggleActive(ds)}
@@ -215,7 +232,11 @@ export function DatasetManager({ categoryKey }: { categoryKey: string }) {
                         {ds.period_label}
                       </Badge>
                     ) : null}
-                    {ds.status === "review" ? (
+                    {ds.hidden ? (
+                      <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                        <EyeOff className="size-3" /> 숨김
+                      </Badge>
+                    ) : ds.status === "review" ? (
                       <Badge className="bg-[color:var(--warning)]/15 text-[10px] text-[color:var(--warning)]">
                         검토 필요
                       </Badge>
@@ -242,14 +263,24 @@ export function DatasetManager({ categoryKey }: { categoryKey: string }) {
                   {openGrid === ds.id ? "닫기" : "원본 보기 · 수정"}
                 </Button>
                 {canEdit ? (
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    className="text-destructive"
-                    onClick={() => onDelete(ds)}
-                  >
-                    <Trash2 />
-                  </Button>
+                  <>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      title={ds.hidden ? "다시 표시" : "숨기기 (분석·표에서 제외)"}
+                      onClick={() => onToggleHidden(ds)}
+                    >
+                      {ds.hidden ? <Eye /> : <EyeOff />}
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => onDelete(ds)}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </>
                 ) : null}
               </div>
               {openGrid === ds.id ? (

@@ -8,11 +8,17 @@ import { SalaryAnalytics } from "@/components/salary/salary-analytics";
 import { SourcingFunnelDashboard } from "@/components/recruiting/sourcing-funnel-dashboard";
 import { OnboardingTracker } from "@/components/retention/onboarding-tracker";
 import { RetentionAnalysis } from "@/components/retention/retention-analysis";
+import { OfferWorkflow } from "@/components/offer/offer-workflow";
 
 /** 고도화된 화면 — 단일 스마트 업로드 + 전용 분석 컴포넌트 (카테고리별 업로드 카드 없음) */
 const CUSTOM_ANALYSIS: Record<string, React.ReactNode> = {
   compband: <SalaryAnalytics />,
-  offersim: <SalaryAnalytics showOfferEvaluator />,
+  offersim: (
+    <div className="space-y-6">
+      <OfferWorkflow />
+      <SalaryAnalytics showOfferEvaluator />
+    </div>
+  ),
   sourcingfunnel: <SourcingFunnelDashboard />,
   onboarding: <OnboardingTracker />,
   retention: <RetentionAnalysis />,

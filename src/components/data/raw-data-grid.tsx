@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, Trash2, Loader2, EyeOff, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getCategory } from "@/lib/data-catalog";
@@ -10,6 +10,7 @@ import {
   updateRow,
   addRow,
   deleteRow,
+  setRowHidden,
   type RowRecord,
 } from "@/lib/datasets";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export function RawDataGrid({
   const cat = getCategory(categoryKey);
   const [rows, setRows] = useState<RowRecord[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -58,6 +60,15 @@ export function RawDataGrid({
     };
   }, [datasetId, load]);
 
+  const hiddenCount = useMemo(
+    () => (rows ?? []).filter((r) => r.hidden).length,
+    [rows],
+  );
+  const visibleRows = useMemo(
+    () => (rows ?? []).filter((r) => showHidden || !r.hidden),
+    [rows, showHidden],
+  );
+
   if (!cat) return null;
 
   if (rows === null) {
@@ -74,7 +85,6 @@ export function RawDataGrid({
     const current = String(row.values?.[key] ?? "");
     if (current === value) return;
     const nextValues = { ...row.values, [key]: value };
-    // optimistic
     setRows(
       (prev) =>
         prev?.map((r) => (r.id === row.id ? { ...r, values: nextValues } : r)) ??
@@ -114,6 +124,19 @@ export function RawDataGrid({
     }
   };
 
+  const onToggleRowHidden = async (row: RowRecord) => {
+    setRows((prev) =>
+      prev?.map((r) => (r.id === row.id ? { ...r, hidden: !r.hidden } : r)) ?? prev,
+    );
+    try {
+      await setRowHidden(row.id, !row.hidden);
+    } catch (e) {
+      toast.error("행 숨김 처리에 실패했습니다.");
+      console.error(e);
+      void load();
+    }
+  };
+
   return (
     <div className="rounded-md border">
       <div className="max-h-[420px] overflow-auto">
@@ -134,23 +157,31 @@ export function RawDataGrid({
                   ) : null}
                 </th>
               ))}
-              {canEdit ? <th className="w-10 border-b px-2 py-1.5" /> : null}
+              {canEdit ? (
+                <th className="w-16 border-b px-2 py-1.5" />
+              ) : null}
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {visibleRows.length === 0 ? (
               <tr>
                 <td
                   colSpan={cat.columns.length + (canEdit ? 2 : 1)}
                   className="px-3 py-6 text-center text-muted-foreground"
                 >
-                  행이 없습니다.
-                  {canEdit ? " 아래 ‘행 추가’로 직접 입력할 수 있습니다." : ""}
+                  {rows.length === 0
+                    ? canEdit
+                      ? "행이 없습니다. 아래 ‘행 추가’로 직접 입력할 수 있습니다."
+                      : "행이 없습니다."
+                    : "표시할 행이 없습니다. (숨긴 행만 있음)"}
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
-                <tr key={row.id} className="hover:bg-muted/40">
+              visibleRows.map((row) => (
+                <tr
+                  key={row.id}
+                  className={`hover:bg-muted/40 ${row.hidden ? "opacity-50" : ""}`}
+                >
                   <td className="border-b px-2 py-1 text-muted-foreground tabular-nums">
                     {row.row_no}
                   </td>
@@ -171,7 +202,19 @@ export function RawDataGrid({
                     </td>
                   ))}
                   {canEdit ? (
-                    <td className="border-b px-1 py-1 text-center">
+                    <td className="border-b px-1 py-1 whitespace-nowrap text-center">
+                      <button
+                        onClick={() => onToggleRowHidden(row)}
+                        disabled={busy}
+                        title={row.hidden ? "다시 표시" : "이 행 보관(숨김)"}
+                        className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        {row.hidden ? (
+                          <Eye className="size-3.5" />
+                        ) : (
+                          <EyeOff className="size-3.5" />
+                        )}
+                      </button>
                       <button
                         onClick={() => onDeleteRow(row)}
                         disabled={busy}
@@ -189,12 +232,22 @@ export function RawDataGrid({
         </table>
       </div>
       {canEdit ? (
-        <div className="flex items-center gap-2 border-t px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2 border-t px-3 py-2">
           <Button size="xs" variant="secondary" onClick={onAddRow} disabled={busy}>
             {busy ? <Loader2 className="animate-spin" /> : <Plus />}행 추가
           </Button>
+          {hiddenCount > 0 ? (
+            <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={showHidden}
+                onChange={(e) => setShowHidden(e.target.checked)}
+              />
+              보관(숨긴) 행 {hiddenCount}개 표시
+            </label>
+          ) : null}
           <span className="text-[11px] text-muted-foreground">
-            셀을 클릭해 바로 수정 · 수정 내용은 자동 저장되고 분석에 즉시 반영됩니다.
+            셀 클릭해 수정 · 자동 저장 · 눈 아이콘으로 개별 행 보관(분석에서 제외)
           </span>
         </div>
       ) : null}

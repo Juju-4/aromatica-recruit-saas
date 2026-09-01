@@ -11,6 +11,7 @@ export interface DatasetRecord {
   original_filename: string | null;
   uploaded_by_name: string | null;
   is_active: boolean;
+  hidden: boolean;
   note: string | null;
   created_at: string;
   updated_at: string;
@@ -21,6 +22,7 @@ export interface RowRecord {
   dataset_id: string;
   row_no: number;
   values: Record<string, unknown>;
+  hidden: boolean;
   updated_at: string;
 }
 
@@ -135,7 +137,9 @@ export async function deleteDataset(datasetId: string, filePath?: string | null)
 
 export async function updateDataset(
   datasetId: string,
-  patch: Partial<Pick<DatasetRecord, "name" | "period_label" | "status" | "is_active" | "note">>,
+  patch: Partial<
+    Pick<DatasetRecord, "name" | "period_label" | "status" | "is_active" | "hidden" | "note">
+  >,
 ) {
   const supabase = createClient();
   const { error } = await supabase.from("datasets").update(patch).eq("id", datasetId);
@@ -162,6 +166,15 @@ export async function updateRow(rowId: string, values: Record<string, unknown>) 
   const { error } = await supabase
     .from("dataset_rows")
     .update({ values })
+    .eq("id", rowId);
+  if (error) throw error;
+}
+
+export async function setRowHidden(rowId: string, hidden: boolean) {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("dataset_rows")
+    .update({ hidden })
     .eq("id", rowId);
   if (error) throw error;
 }

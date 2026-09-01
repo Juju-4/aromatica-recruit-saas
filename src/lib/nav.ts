@@ -66,9 +66,9 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         slug: "offersim",
         title: "오퍼 & 시뮬레이터",
-        sub: "연봉 페이밴드 분석 + 처우 적절성 시뮬레이터 (직종·연차·평가등급 → 권장 연봉 범위)",
+        sub: "처우 확인사항(제안연봉 산정·의견·레퍼런스·아카이브) + 연봉 페이밴드·처우 시뮬레이터",
         tag: "Tier 3 · Prescriptive",
-        categories: ["salary"],
+        categories: ["employees", "salary"],
       },
     ],
   },
