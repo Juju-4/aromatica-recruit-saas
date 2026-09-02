@@ -306,6 +306,18 @@ function CaseEditor({
   const prev = won(p.prev_salary);
   const base = won(p.proposed_base);
   const laborCost = won(p.labor_cost_total) || AR_BENEFIT_TOTAL;
+  const proposedMonthly = won(p.proposed_monthly) || Math.round(base / 12);
+  // 현재 직장 산정내역 (원본 엑셀 2) 산정내역 과 동일 계산)
+  const cur = {
+    base: won(p.cur_base),
+    meal: won(p.cur_meal),
+    job: won(p.cur_job_allowance),
+    ot: won(p.cur_overtime),
+    bonus: won(p.cur_fixed_bonus),
+  };
+  const curMonthlySum = cur.base + cur.ot + cur.meal; // 원본 D35 = D30+D33+D31
+  const curAnnualSum =
+    cur.base * 12 + cur.meal * 12 + cur.job * 12 + cur.ot * 12 + cur.bonus;
 
   const save = async (extra?: Partial<Parameters<typeof updateOfferCase>[1]>) => {
     setBusy("save");
@@ -544,8 +556,66 @@ function CaseEditor({
             <div className="mt-2 grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-2 text-[11.5px] md:grid-cols-4">
               <KV k="직전연봉" v={fmtWon(prev)} />
               <KV k="제안(기본급)" v={fmtWon(base)} />
+              <KV k="제안월급(자동)" v={fmtWon(proposedMonthly)} />
               <KV k="인상률(기본급)" v={`${raisePct(prev, base).toFixed(1)}%`} accent />
               <KV k="인상률(복지포함)" v={`${raisePct(prev, base + laborCost).toFixed(1)}%`} accent />
+            </div>
+          </Section>
+
+          {/* 산정내역 (현재 직장 · 1년 환산) — 사이트 내 자동 계산 */}
+          <Section title="산정내역 (현재 직장 · 1년 환산)">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+              <F label="기본급(월, 원)" v={p.cur_base} on={(v) => setP({ ...p, cur_base: won(v) })} ro={!canEdit} num />
+              <F label="식대·비과세(월, 원)" v={p.cur_meal} on={(v) => setP({ ...p, cur_meal: won(v) })} ro={!canEdit} num />
+              <F label="직무/직책수당(월, 원)" v={p.cur_job_allowance} on={(v) => setP({ ...p, cur_job_allowance: won(v) })} ro={!canEdit} num />
+              <F label="시간외수당(월, 원)" v={p.cur_overtime} on={(v) => setP({ ...p, cur_overtime: won(v) })} ro={!canEdit} num />
+              <F label="고정상여(연, 원)" v={p.cur_fixed_bonus} on={(v) => setP({ ...p, cur_fixed_bonus: won(v) })} ro={!canEdit} num />
+            </div>
+            <div className="mt-2 overflow-auto rounded border">
+              <table className="w-full text-[11.5px]">
+                <thead className="bg-muted">
+                  <tr>{["항목", "월(원)", "1년 환산(원)"].map((h) => <th key={h} className="px-2 py-1 text-left font-semibold">{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["기본급", cur.base, cur.base * 12],
+                    ["식대(비과세)", cur.meal, cur.meal * 12],
+                    ["직무/직책수당", cur.job, cur.job * 12],
+                    ["시간외수당", cur.ot, cur.ot * 12],
+                    ["고정상여", cur.bonus, cur.bonus],
+                  ].map(([k, m, y]) => (
+                    <tr key={k as string} className="border-b">
+                      <td className="px-2 py-1">{k}</td>
+                      <td className="px-2 py-1">{fmtWon(m as number)}</td>
+                      <td className="px-2 py-1">{fmtWon(y as number)}</td>
+                    </tr>
+                  ))}
+                  <tr className="font-bold">
+                    <td className="px-2 py-1">급여 계</td>
+                    <td className="px-2 py-1">{fmtWon(curMonthlySum)}</td>
+                    <td className="px-2 py-1">{fmtWon(curAnnualSum)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-2 overflow-auto rounded border">
+              <table className="w-full text-[11.5px]">
+                <thead className="bg-muted">
+                  <tr>{["구분", "연봉(기본급)", "총 연봉(복지포함)"].map((h) => <th key={h} className="px-2 py-1 text-left font-semibold">{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b">
+                    <td className="px-2 py-1">현재 직장</td>
+                    <td className="px-2 py-1">{fmtWon(curMonthlySum * 12)}</td>
+                    <td className="px-2 py-1">{fmtWon(curAnnualSum)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-2 py-1">제안</td>
+                    <td className="px-2 py-1">{fmtWon(base)}</td>
+                    <td className="px-2 py-1">{fmtWon(base + laborCost)}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </Section>
 
