@@ -26,6 +26,7 @@ import {
   deleteOfferCase,
   listReferenceChecks,
   addReferenceCheck,
+  updateReferenceCheck,
   deleteReferenceCheck,
   type OfferCase,
   type OfferPayload,
@@ -371,35 +372,36 @@ function CaseEditor({
     toast.success("팀즈 메시지를 복사했습니다. 채팅에 붙여넣으세요.");
   };
 
-  const sendOneDrive = async () => {
+  // 아카이브 경로 라벨: 본부 / YYYY-MM-DD_포지션_이름
+  const archivePath = useMemo(() => {
+    const div = oc.division?.trim() || "본부미지정";
+    const day = (oc.sent_at ?? new Date().toISOString()).slice(0, 10);
+    const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "_");
+    return `${safe(div)}/${day}_${safe(oc.position)}_${safe(oc.candidate_name)}`;
+  }, [oc.division, oc.position, oc.candidate_name, oc.sent_at]);
+
+  // 전송 = 엑셀 다운로드 + 팀즈 메시지 복사 + 전송완료 처리 (MS 연동 없음)
+  const finalize = async () => {
     setBusy("send");
     try {
-      const { base64, fileName } = await buildOfferXlsx(
+      const { blob, fileName } = await buildOfferXlsx(
         { ...oc, payload: p, career_rows: career, opinion_draft: opinion },
         teamRows,
       );
-      const res = await fetch("/api/ms/onedrive-save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          division: oc.division,
-          position: oc.position,
-          candidate: oc.candidate_name,
-          fileBase64: base64,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        toast.error(json.error ?? "전송 실패");
-        return;
-      }
+      downloadBlob(blob, fileName);
+      const msg = buildTeamsMessage({ ...oc, payload: p, opinion_draft: opinion });
+      try {
+        await navigator.clipboard?.writeText(msg);
+      } catch {}
       await save({
         status: "sent",
         sent_at: new Date().toISOString(),
-        onedrive_file_url: json.fileUrl,
-        onedrive_folder: json.folderPath,
+        onedrive_folder: archivePath,
+        teams_message: msg,
       });
-      toast.success(`OneDrive 저장 완료: ${json.folderPath}/${fileName}`);
+      toast.success(
+        `전송완료 처리됨 · ${fileName} 다운로드 + 팀즈 메시지 복사됨. 저장 위치: ${archivePath}`,
+      );
     } catch (e) {
       toast.error(String(e));
     } finally {
@@ -407,51 +409,31 @@ function CaseEditor({
     }
   };
 
-  const draftReference = async (r: ReferenceCheck) => {
+  // 레퍼런스: 양식 파일 다운로드 + 기본 메일 앱(mailto) 초안 열기 (MS 연동 없음)
+  const mailReference = async (r: ReferenceCheck) => {
     setBusy("ref-" + r.id);
     try {
-      // 레퍼런스 양식 첨부 (public 의 기본 양식)
-      let attachmentBase64: string | undefined;
       try {
         const f = await fetch("/reference-check-form.xlsx");
         if (f.ok) {
-          const buf = new Uint8Array(await f.arrayBuffer());
-          let s = "";
-          buf.forEach((b) => (s += String.fromCharCode(b)));
-          attachmentBase64 = btoa(s);
+          downloadBlob(await f.blob(), `레퍼런스체크_양식_${oc.candidate_name}.xlsx`);
         }
       } catch {}
-      const res = await fetch("/api/ms/reference-draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          refereeEmail: r.referee_email,
-          refereeName: r.referee_name,
-          candidate: oc.candidate_name,
-          position: oc.position,
-          attachmentBase64,
-          attachmentName: attachmentBase64 ? "AR_Reference_check_양식.xlsx" : undefined,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        // MS365 미설정 → mailto 폴백
-        const subject = encodeURIComponent(
-          `[아로마티카] ${oc.candidate_name} 님 레퍼런스 체크 요청`,
-        );
-        const body = encodeURIComponent(
-          `안녕하세요, 아로마티카 인사팀입니다.\n\n${oc.candidate_name} 님 레퍼런스 체크를 요청드립니다.\n첨부 양식 참고 부탁드립니다.\n\n감사합니다.`,
-        );
-        window.open(`mailto:${r.referee_email}?subject=${subject}&body=${body}`);
-        toast.message(
-          json.needsSetup
-            ? "MS365 미설정 — 기본 메일 앱으로 열었습니다. (첨부는 수동)"
-            : json.error ?? "메일 앱으로 열었습니다.",
-        );
-        return;
-      }
-      toast.success("Outlook에 초안이 생성되었습니다.");
+      const subject = encodeURIComponent(
+        `[아로마티카] ${oc.candidate_name} 님 레퍼런스 체크 요청 (${oc.position})`,
+      );
+      const body = encodeURIComponent(
+        `안녕하세요, 아로마티카 인사팀입니다.\n\n` +
+          `${oc.candidate_name} 님(${oc.position}) 레퍼런스 체크를 요청드립니다.\n` +
+          `방금 내려받은 레퍼런스 체크 양식 파일을 첨부해 회신 부탁드립니다.\n\n` +
+          `감사합니다.\n아로마티카 인사팀`,
+      );
+      window.open(`mailto:${r.referee_email}?subject=${subject}&body=${body}`);
+      try {
+        await updateReferenceCheck(r.id, { status: "drafted" });
+      } catch {}
       void listReferenceChecks(oc.id).then(setRefs);
+      toast.message("메일 앱에 초안을 열었습니다. 내려받은 양식 파일을 첨부해 보내세요.");
     } catch (e) {
       toast.error(String(e));
     } finally {
@@ -642,9 +624,9 @@ function CaseEditor({
                   <Badge variant="outline" className="text-[9px]">{r.status}</Badge>
                   {canEdit ? (
                     <>
-                      <Button size="xs" variant="outline" className="ml-auto" disabled={busy === "ref-" + r.id} onClick={() => draftReference(r)}>
+                      <Button size="xs" variant="outline" className="ml-auto" disabled={busy === "ref-" + r.id} onClick={() => mailReference(r)}>
                         {busy === "ref-" + r.id ? <Loader2 className="animate-spin" /> : <Mail />}
-                        Outlook 초안
+                        양식+메일 초안
                       </Button>
                       <Button size="xs" variant="ghost" className="text-destructive" onClick={async () => { await deleteReferenceCheck(r.id); void listReferenceChecks(oc.id).then(setRefs); }}>
                         <Trash2 />
@@ -683,17 +665,17 @@ function CaseEditor({
               <Button size="sm" variant="outline" onClick={copyTeams}>
                 <Copy />팀즈 메시지 복사
               </Button>
-              <Button size="sm" variant="outline" onClick={sendOneDrive} disabled={busy === "send"}>
+              <Button size="sm" onClick={finalize} disabled={busy === "send"}>
                 {busy === "send" ? <Loader2 className="animate-spin" /> : <Send />}
-                전송 (OneDrive 저장)
+                전송 (엑셀+팀즈 완료처리)
               </Button>
               <Button size="sm" variant="outline" onClick={() => save({ status: "archived", archived_at: new Date().toISOString() })}>
                 <Archive />아카이브
               </Button>
-              {oc.onedrive_file_url ? (
-                <a href={oc.onedrive_file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11.5px] text-[color:var(--good)]">
-                  <Check className="size-3.5" />저장된 파일 열기
-                </a>
+              {oc.onedrive_folder ? (
+                <span className="inline-flex items-center gap-1 text-[11.5px] text-muted-foreground">
+                  <Check className="size-3.5" />저장 위치: {oc.onedrive_folder}
+                </span>
               ) : null}
             </div>
           ) : null}
